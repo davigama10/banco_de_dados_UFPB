@@ -58,7 +58,7 @@ CREATE TABLE Produto(
 	
 );
 
-CREATE TABLE Itens_venda(
+CREATE TABLE Itens_vendas(
 
 	Cod_itens SERIAL PRIMARY KEY,
 	Cod_Produto smallint unique NOT NULL,
@@ -81,8 +81,8 @@ CREATE TABLE Vendas(
 	Data_ VARCHAR(20),
 	
 	FOREIGN KEY(cod_Cliente) REFERENCES Cliente(Cod_Cliente),
-	FOREIGN KEY(cod_Funcionario) REFERENCES Funcionarios(Cod_Funcionario),
-	FOREIGN KEY(cod_itens) REFERENCES Itens_venda(Cod_itens),
+	FOREIGN KEY(cod_Funcionario) REFERENCES Funcionario(Cod_Funcionario),
+	FOREIGN KEY(cod_itens) REFERENCES itens_vendas(Cod_itens),
 	FOREIGN KEY(cod_Produto) REFERENCES Produto(Cod_Produto)
 
 );
