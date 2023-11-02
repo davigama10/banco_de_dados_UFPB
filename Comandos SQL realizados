@@ -6,3 +6,6 @@ DROP COLUMN cod_produto;
 
 
 DROP TABLE vendedor
+
+ALTER TABLE funcionarios
+ADD senha VARCHAR(255);
