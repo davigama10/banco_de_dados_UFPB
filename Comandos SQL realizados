@@ -2,3 +2,7 @@ ALTER TABLE vendas
 DROP COLUMN cod_itens,
 DROP COLUMN quant_produto,
 DROP COLUMN cod_produto;
+
+
+
+DROP TABLE vendedor
