@@ -1,6 +1,7 @@
 import psycopg2
 from prettytable import PrettyTable
 from decimal import Decimal
+import os
 
 
 class Connection:
@@ -37,10 +38,44 @@ class Connection:
     def funcionario_existe(self, cpf, senha):
         self.cur.execute("SELECT cpf FROM funcionario WHERE cpf = %s AND senha = %s", (cpf, senha))
         return self.cur.fetchone() is not None
+    
+    def get_sales_report(self, cod_funcionario, ano, mes):
+        sql = f"""
+            SELECT *
+            FROM RelatorioVendasPorFuncionario
+            WHERE cod_funcionario = %s
+            AND ano = %s
+            AND mes = %s;
+        """
+        self.cur.execute(sql, (cod_funcionario, ano, mes))
+        return self.cur.fetchall()
+    
+    def gerar_relatorio_vendas(self, cod_funcionario, ano, mes):
+        conn = Connection()
+        relatorio = conn.get_sales_report(cod_funcionario, ano, mes)
+        conn.close()
+        return relatorio
+
 
 class ProdutoApp:
     def __init__(self):
         self.load_data()
+        
+    def registrar_venda(self, cod_funcionario, cod_cliente, num_mesa, valor_compra, data):
+        try:
+            conn = Connection()
+            
+            valor_comissao = valor_compra * 0.1  # 10% do valor total da compra
+
+            sql = "INSERT INTO venda (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data) VALUES (%s, %s, %s, %s, %s, %s);"
+            conn.execute(sql, (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data))
+
+            conn.commit()
+            conn.close()
+            print("Venda registrada com sucesso!")
+
+        except Exception as e:
+            print("Erro ao registrar venda:", str(e))     
     
     def load_data(self):
         try:
@@ -112,7 +147,8 @@ class ProdutoApp:
             print(table)
 
         except Exception as e:
-            print("Erro ao buscar dados:", str(e))
+            print("Erro ao buscar dados:", str(e))     
+            
 
 def fazer_compra():
     conn = Connection()
@@ -162,6 +198,11 @@ def fazer_compra():
 
             # Pergunta ao usuário se ele quer continuar comprando
             continuar = input("Deseja continuar comprando? (s/n): ")
+            
+            
+            # Limpa a saída do console antes da próxima interação
+            os.system('cls' if os.name == 'nt' else 'clear')
+            
             if continuar.lower() != 's':
                 break
 
@@ -196,6 +237,17 @@ def fazer_compra():
         else:
             print("Parece que você é um novo cliente. Vamos fazer seu cadastro.")
             ClienteForm().submit()
+            
+        cod_funcionario = input("Digite o código do funcionário: ")
+        num_mesa = input("Digite o número da mesa: ")
+        data_compra = input("Digite a data da compra (DD-MM-AAAA): ")
+
+        ProdutoApp().registrar_venda(cod_funcionario, cpf_cliente, num_mesa, total_value, data_compra)
+        
+            # Limpa a saída do console antes de cada interação
+        os.system('cls' if os.name == 'nt' else 'clear')
+            
+        
 
     except Exception as e:
         print("Erro ao fazer a compra:", str(e))
@@ -316,12 +368,30 @@ class Vendedor:
     def close(self):
         self.conn.close()
 
-def gerar_relatorio_vendas():
-    conn = Connection()
-    sql = "SELECT cpf_vendedor, COUNT(*), SUM(valor) FROM venda GROUP BY cpf_vendedor;"
-    relatorio = conn.query(sql)
-    conn.close()
-    return relatorio    
+    def gerar_relatorio_vendas():
+        conn = Connection()
+        sql = "SELECT cpf_vendedor, COUNT(*), SUM(valor) FROM venda GROUP BY cpf_vendedor;"
+        relatorio = conn.query(sql)
+        conn.close()
+        return relatorio 
+
+
+    def registrar_venda(cod_funcionario, cod_cliente, num_mesa, valor_compra, data):
+        try:
+            conn = Connection()
+            
+            valor_comissao = valor_compra * 0.1  # 10% do valor total da compra
+
+            sql = "INSERT INTO venda (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data) VALUES (%s, %s, %s, %s, %s, %s);"
+            conn.execute(sql, (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data))
+
+            conn.commit()
+            conn.close()
+            print("Venda registrada com sucesso!")
+
+        except Exception as e:
+            print("Erro ao registrar venda:", str(e))   
+   
                 
                 
 class Menu:
@@ -341,6 +411,10 @@ class Menu:
             
             opcao = int(input("Escolha uma opção: "))
             
+             # Limpa a saída do console antes de cada interação
+            os.system('cls' if os.name == 'nt' else 'clear')
+            
+            
             if opcao == 1:
                 fazer_compra()  # Primeiro, selecione os itens para comprar
                 # self.cliente_form.submit()  # Em seguida, faça o cadastro do cliente
@@ -350,8 +424,12 @@ class Menu:
                 print("Digite 1 para buscar por marca")
                 print("Digite 2 para buscar por faixa de preço")
                 print("Digite 3 para buscar por categoria")
+                print("Digite 4 para saber se o produto foi fabricado em mari")
                 
                 opcao_busca = int(input("Escolha uma opção de busca: "))
+                
+                            # Limpa a saída do console antes de cada interação
+                os.system('cls' if os.name == 'nt' else 'clear')
                 
                 if opcao_busca == 1:
                     marca = input("Digite a marca do produto que deseja verificar: ")
@@ -373,6 +451,10 @@ class Menu:
                             print(f"O produto '{produto[5]}' com preço entre {preco_min} e {preco_max} tem {produto[1]} unidades em estoque.")
                     else:
                         print("Produto não encontrado.")
+                elif opcao_busca == 4:
+                    fabricado_em_mari = input("O produto foi fabricado em Mari? (Sim/Não): ")
+                    self.app.search(fabricado_em_mari=fabricado_em_mari == 'Sim')
+
             elif opcao == 3:
                 cpf_funcionario = input("Por favor, digite seu CPF: ")
                 senha_funcionario = input("Por favor, digite sua senha: ")
@@ -385,10 +467,16 @@ class Menu:
                         print("Digite 0 para sair")
 
                         opcao_funcionario = int(input("Escolha uma opção: "))
+                        
+                        # Limpa a saída do console antes de cada interação
+                        os.system('cls' if os.name == 'nt' else 'clear')
+                            
 
                         if opcao_funcionario == 1:
-                            relatorio = gerar_relatorio_vendas()
-                            print("Relatório de vendas:")
+                            ano = input("ano: ")
+                            mes = input("mes: ")
+                            relatorio = conn.gerar_relatorio_vendas(cpf_funcionario, ano, mes)
+                            print("relatorio mensal:")
                             for linha in relatorio:
                                 print(linha)
                         elif opcao_funcionario == 2:
@@ -396,9 +484,14 @@ class Menu:
                             print("Digite 1 para buscar por marca")
                             print("Digite 2 para buscar por faixa de preço")
                             print("Digite 3 para buscar por categoria")
-                            print("Digite 4 para buscar produtos com menos de 5 unidades disponíveis")
+                            print("Digite 4 para saber se o produto foi fabricado em mari")
+                            print("Digite 5 para buscar produtos com menos de 5 unidades disponíveis")
+                            
                             
                             opcao_busca = int(input("Escolha uma opção de busca: "))
+                            
+                             # Limpa a saída do console antes de cada interação
+                            os.system('cls' if os.name == 'nt' else 'clear')
                             
                             if opcao_busca == 1:
                                 marca = input("Digite a marca do produto que deseja verificar: ")
@@ -430,7 +523,10 @@ class Menu:
                                         print(f"O produto '{produto[5]}' da categoria {categoria} tem {produto[1]} unidades em estoque.")
                                 else:
                                     print("Produto não encontrado.")
-                            elif opcao_busca == 4:  # Nova condição
+                            elif opcao_busca == 4:
+                                fabricado_em_mari = input("O produto foi fabricado em Mari? (Sim/Não): ")
+                                self.app.search(fabricado_em_mari=fabricado_em_mari == 'Sim')
+                            elif opcao_busca == 5:  # Nova condição
                                 sql = "SELECT * FROM produto WHERE quant_estoque < %s;"
                                 produtos = conn.query(sql, (5,))
                                 if produtos:
