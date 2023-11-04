@@ -65,9 +65,9 @@ class ProdutoApp:
         try:
             conn = Connection()
             
-            valor_comissao = valor_compra * 0.1  # 10% do valor total da compra
+            valor_comissao = Decimal(valor_compra) * Decimal('0.1')  # 10% do valor total da compra
 
-            sql = "INSERT INTO venda (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data) VALUES (%s, %s, %s, %s, %s, %s);"
+            sql = "INSERT INTO vendas (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data_) VALUES (%s, %s, %s, %s, %s, %s);"
             conn.execute(sql, (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data))
 
             conn.commit()
@@ -149,6 +149,33 @@ class ProdutoApp:
         except Exception as e:
             print("Erro ao buscar dados:", str(e))     
             
+def get_cod_cliente(cpf_cliente):
+    try:
+        conn = psycopg2.connect(
+            dbname="dbproject",
+            user="postgres",
+            password="12345678",
+            host="localhost"
+        )
+        cur = conn.cursor()
+
+        sql = "SELECT cod_cliente FROM cliente WHERE cpf = %s"
+
+        # Executar a consulta com o CPF desejado
+        cur.execute(sql, (cpf_cliente,))
+
+        # Atribuir o resultado a uma variável
+        cod_cliente = cur.fetchone()
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        return cod_cliente
+
+    except Exception as e:
+        print("Erro ao inserir forma de pagamento:", str(e))
+
+
 
 def fazer_compra():
     conn = Connection()
@@ -198,8 +225,7 @@ def fazer_compra():
 
             # Pergunta ao usuário se ele quer continuar comprando
             continuar = input("Deseja continuar comprando? (s/n): ")
-            
-            
+                        
             # Limpa a saída do console antes da próxima interação
             os.system('cls' if os.name == 'nt' else 'clear')
             
@@ -242,9 +268,14 @@ def fazer_compra():
         num_mesa = input("Digite o número da mesa: ")
         data_compra = input("Digite a data da compra (DD-MM-AAAA): ")
 
-        ProdutoApp().registrar_venda(cod_funcionario, cpf_cliente, num_mesa, total_value, data_compra)
         
-            # Limpa a saída do console antes de cada interação
+
+        aux = get_cod_cliente(cpf_cliente)
+        print(aux)
+
+        ProdutoApp().registrar_venda(cod_funcionario, int(aux[0]), num_mesa, valor_total, data_compra)
+        
+        # Limpa a saída do console antes de cada interação
         os.system('cls' if os.name == 'nt' else 'clear')
             
         
@@ -321,7 +352,7 @@ def insert_forma_pagamento(tipo, status):
         )
         cur = conn.cursor()
         
-        sql = "INSERT INTO FormaPagamento (tipo, status) VALUES (%s, %s);"
+        sql = "INSERT INTO formapagamento (tipo, status) VALUES (%s, %s);"
         cur.execute(sql, (tipo, status))
         
         conn.commit()
@@ -368,29 +399,12 @@ class Vendedor:
     def close(self):
         self.conn.close()
 
-    def gerar_relatorio_vendas():
+    def gerar_relatorio_vendas(self):
         conn = Connection()
         sql = "SELECT cpf_vendedor, COUNT(*), SUM(valor) FROM venda GROUP BY cpf_vendedor;"
         relatorio = conn.query(sql)
         conn.close()
         return relatorio 
-
-
-    def registrar_venda(cod_funcionario, cod_cliente, num_mesa, valor_compra, data):
-        try:
-            conn = Connection()
-            
-            valor_comissao = valor_compra * 0.1  # 10% do valor total da compra
-
-            sql = "INSERT INTO venda (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data) VALUES (%s, %s, %s, %s, %s, %s);"
-            conn.execute(sql, (cod_funcionario, cod_cliente, num_mesa, valor_comissao, valor_compra, data))
-
-            conn.commit()
-            conn.close()
-            print("Venda registrada com sucesso!")
-
-        except Exception as e:
-            print("Erro ao registrar venda:", str(e))   
    
                 
                 
