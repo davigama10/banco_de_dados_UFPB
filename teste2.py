@@ -1,15 +1,16 @@
 import psycopg2
 from prettytable import PrettyTable
 from decimal import Decimal
+from datetime import datetime
 import os
 
 
 class Connection:
     def __init__(self):
         self.conn = psycopg2.connect(
-            dbname="dbproject",
+            dbname="PROJETO_BD1",
             user="postgres",
-            password="12345678",
+            password="84265",
             host="localhost"
         )
         self.cur = self.conn.cursor()
@@ -36,7 +37,7 @@ class Connection:
         return self.cur.fetchone() is not None
 
     def funcionario_existe(self, cpf, senha):
-        self.cur.execute("SELECT cpf FROM funcionario WHERE cpf = %s AND senha = %s", (cpf, senha))
+        self.cur.execute("SELECT cpf FROM funcionarios WHERE cpf = %s AND senha = %s", (cpf, senha))
         return self.cur.fetchone() is not None
     
     def get_sales_report(self, cod_funcionario, ano, mes):
@@ -47,12 +48,22 @@ class Connection:
             AND ano = %s
             AND mes = %s;
         """
+
+        # Executar a consulta
         self.cur.execute(sql, (cod_funcionario, ano, mes))
-        return self.cur.fetchall()
+        aux = self.cur.fetchall()
+        return aux
     
-    def gerar_relatorio_vendas(self, cod_funcionario, ano, mes):
+    def gerar_relatorio_vendas(self, cpf_funcionario, ano, mes):
         conn = Connection()
-        relatorio = conn.get_sales_report(cod_funcionario, ano, mes)
+        sql = f"""
+            SELECT cod_funcionario
+            FROM funcionarios
+            WHERE cpf = %s;
+            """
+        self.cur.execute(sql, (cpf_funcionario, ))
+        cod_funcionario = self.cur.fetchone()
+        relatorio = conn.get_sales_report(int(cod_funcionario[0]), ano, mes)
         conn.close()
         return relatorio
 
@@ -152,9 +163,9 @@ class ProdutoApp:
 def get_cod_cliente(cpf_cliente):
     try:
         conn = psycopg2.connect(
-            dbname="dbproject",
+            dbname="PROJETO_BD1",
             user="postgres",
-            password="12345678",
+            password="84265",
             host="localhost"
         )
         cur = conn.cursor()
@@ -267,8 +278,7 @@ def fazer_compra():
         cod_funcionario = input("Digite o código do funcionário: ")
         num_mesa = input("Digite o número da mesa: ")
         data_compra = input("Digite a data da compra (DD-MM-AAAA): ")
-
-        
+        data_compra = datetime.strptime(data_compra, "%d-%m-%Y")        
 
         aux = get_cod_cliente(cpf_cliente)
         print(aux)
@@ -345,9 +355,9 @@ class FormaPagamentoForm:
 def insert_forma_pagamento(tipo, status):
     try:
         conn = psycopg2.connect(
-            dbname="dbproject",
+            dbname="PROJETO_BD1",
             user="postgres",
-            password="12345678",
+            password="84265",
             host="localhost"
         )
         cur = conn.cursor()
@@ -491,6 +501,7 @@ class Menu:
                             mes = input("mes: ")
                             relatorio = conn.gerar_relatorio_vendas(cpf_funcionario, ano, mes)
                             print("relatorio mensal:")
+                            #print(relatorio)
                             for linha in relatorio:
                                 print(linha)
                         elif opcao_funcionario == 2:
